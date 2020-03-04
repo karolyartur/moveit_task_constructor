@@ -39,6 +39,7 @@ endif ()
 # check for MOVEIT_MASTER
 include(CheckIncludeFileCXX)
 set(CMAKE_REQUIRED_INCLUDES ${moveit_core_INCLUDE_DIRS})
+set(CMAKE_REQUIRED_FLAGS "-std=c++11")
 CHECK_INCLUDE_FILE_CXX(moveit/collision_detection/collision_env.h MOVEIT_MASTER)
 if(NOT MOVEIT_MASTER)
   set(MOVEIT_MASTER 0)
@@ -51,7 +52,8 @@ add_subdirectory(src)
 add_subdirectory(python)
 add_subdirectory(test)
 
-install(DIRECTORY include/ DESTINATION ${CATKIN_GLOBAL_INCLUDE_DESTINATION})
+install(DIRECTORY include/ DESTINATION ${CATKIN_GLOBAL_INCLUDE_DESTINATION}
+	PATTERN "*_p.h" EXCLUDE)
 install(FILES
 	motion_planning_stages_plugin_description.xml
 	DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})

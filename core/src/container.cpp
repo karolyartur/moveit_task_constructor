@@ -81,7 +81,7 @@ bool ContainerBasePrivate::traverseStages(const ContainerBase::StageCallback& pr
 
 	for (auto& stage : children_) {
 		if (!processor(*stage, cur_depth))
-			continue;
+			return false;
 		const ContainerBasePrivate* container = dynamic_cast<const ContainerBasePrivate*>(stage->pimpl());
 		if (container)
 			container->traverseStages(processor, cur_depth + 1, max_depth);
@@ -667,7 +667,7 @@ void SerialContainer::compute() {
 				continue;
 
 			ROS_DEBUG("Computing stage '%s'", stage->name().c_str());
-			stage->pimpl()->compute();
+			stage->pimpl()->runCompute();
 		} catch (const Property::error& e) {
 			stage->reportPropertyError(e);
 		}
@@ -861,7 +861,7 @@ bool WrapperBase::canCompute() const {
 
 void WrapperBase::compute() {
 	try {
-		wrapped()->pimpl()->compute();
+		wrapped()->pimpl()->runCompute();
 	} catch (const Property::error& e) {
 		wrapped()->reportPropertyError(e);
 	}
@@ -877,7 +877,7 @@ bool Alternatives::canCompute() const {
 void Alternatives::compute() {
 	for (const auto& stage : pimpl()->children()) {
 		try {
-			stage->pimpl()->compute();
+			stage->pimpl()->runCompute();
 		} catch (const Property::error& e) {
 			stage->reportPropertyError(e);
 		}
@@ -917,7 +917,7 @@ void Fallbacks::compute() {
 		return;
 
 	try {
-		active_child_->pimpl()->compute();
+		active_child_->pimpl()->runCompute();
 	} catch (const Property::error& e) {
 		active_child_->reportPropertyError(e);
 	}
@@ -982,7 +982,7 @@ bool Merger::canCompute() const {
 void Merger::compute() {
 	for (const auto& stage : pimpl()->children()) {
 		try {
-			stage->pimpl()->compute();
+			stage->pimpl()->runCompute();
 		} catch (const Property::error& e) {
 			stage->reportPropertyError(e);
 		}

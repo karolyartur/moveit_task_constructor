@@ -143,10 +143,7 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 		plan_execution::ExecutableTrajectory& exec_traj = plan.plan_components_.back();
 
 		// define individual variable for use in closure below
-		const std::string description = std::to_string(i + 1) + "/" + std::to_string(solution.sub_trajectory.size()) +
-		                                " - subsolution " + std::to_string(sub_traj.info.id) + " of stage " +
-		                                std::to_string(sub_traj.info.stage_id);
-
+		const std::string description = std::to_string(i + 1) + "/" + std::to_string(solution.sub_trajectory.size());
 		exec_traj.description_ = description;
 
 		const moveit::core::JointModelGroup* group = nullptr;
@@ -176,7 +173,12 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 			if (!planning_scene::PlanningScene::isEmpty(sub_traj.scene_diff)) {
 #endif
 				ROS_DEBUG_STREAM_NAMED("ExecuteTaskSolution", "apply effect of " << description);
-				return context_->planning_scene_monitor_->newPlanningSceneMessage(sub_traj.scene_diff);
+				bool result = context_->planning_scene_monitor_->newPlanningSceneMessage(sub_traj.scene_diff);
+#if MOVEIT_MASTER
+				// HACK: workaround for https://github.com/ros-planning/moveit/issues/1835
+				ros::Duration(0.1).sleep();
+#endif
+				return result;
 			}
 			return true;
 		};
