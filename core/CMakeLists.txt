@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
 	roscpp
 	visualization_msgs
 	rviz_marker_tools
+	moveit_ros_benchmarks
 )
 
 catkin_package(

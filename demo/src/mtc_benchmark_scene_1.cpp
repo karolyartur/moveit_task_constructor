@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
 	ros::AsyncSpinner spinner(1);
 	spinner.start();
 
-	// Add table and object to planning scene
+	// Create the scene 
 	ros::Duration(1.0).sleep();  // Wait for ApplyPlanningScene service
 	moveit::planning_interface::PlanningSceneInterface psi;
 	ros::NodeHandle pnh("~");
@@ -132,21 +132,28 @@ int main(int argc, char** argv) {
 	spawnObject(psi, createObject());
 	spawnObject(psi, createBox());
 
-	// Construct and run pick/place task
+	// Construct pick/place task
 	moveit_task_constructor_demo::PickPlaceTask pick_place_task("pick_place_task", nh);
 	pick_place_task.loadParameters();
 	pick_place_task.init();
+
+	// Run X times
+	
+	// TODO: Start measuring time
 	if (pick_place_task.plan()) {
 		ROS_INFO_NAMED(LOGNAME, "Planning succeded");
-		if (pnh.param("execute", false)) {
-			pick_place_task.execute();
-			ROS_INFO_NAMED(LOGNAME, "Execution complete");
-		} else {
-			ROS_INFO_NAMED(LOGNAME, "Execution disabled");
-		}
+		// if (pnh.param("execute", false)) {
+		// 	pick_place_task.execute();
+		// 	ROS_INFO_NAMED(LOGNAME, "Execution complete");
+		// } else {
+		// 	ROS_INFO_NAMED(LOGNAME, "Execution disabled");
+		// }
 	} else {
 		ROS_INFO_NAMED(LOGNAME, "Planning failed");
 	}
+	// TODO: Stop measuring time
+
+	// TODO: Write results to a file
 
 	// Keep introspection alive
 	ros::waitForShutdown();

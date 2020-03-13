@@ -96,8 +96,9 @@ void PickPlaceTask::init() {
 	t.loadRobotModel();
 
 	// Sampling planner
-	auto sampling_planner = std::make_shared<solvers::PipelinePlanner>();
+	auto sampling_planner = std::make_shared<solvers::BenchmarkPlanner>();
 	sampling_planner->setProperty("goal_joint_tolerance", 1e-5);
+	// sampling_planner->setProperty("planner", ""); !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ISSUE?
 
 	// Cartesian planner
 	auto cartesian_planner = std::make_shared<solvers::CartesianPath>();

@@ -17,6 +17,7 @@ add_library(${PROJECT_NAME}
 	${PROJECT_INCLUDE}/solvers/cartesian_path.h
 	${PROJECT_INCLUDE}/solvers/joint_interpolation.h
 	${PROJECT_INCLUDE}/solvers/pipeline_planner.h
+	${PROJECT_INCLUDE}/solvers/benchmark_planner.h
 
 	container.cpp
 	introspection.cpp
@@ -31,6 +32,7 @@ add_library(${PROJECT_NAME}
 	solvers/cartesian_path.cpp
 	solvers/pipeline_planner.cpp
 	solvers/joint_interpolation.cpp
+	solvers/benchmark_planner.cpp
 )
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
 target_include_directories(${PROJECT_NAME}

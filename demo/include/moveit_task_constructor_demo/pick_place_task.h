@@ -41,6 +41,7 @@
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_model/robot_model.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
+//#include <moveit/benchmarks/MTCBenchmark.h>
 
 // MTC
 #include <moveit/task_constructor/task.h>
@@ -56,6 +57,7 @@
 #include <moveit/task_constructor/stages/predicate_filter.h>
 #include <moveit/task_constructor/solvers/cartesian_path.h>
 #include <moveit/task_constructor/solvers/pipeline_planner.h>
+#include <moveit/task_constructor/solvers/benchmark_planner.h>
 #include <moveit_task_constructor_msgs/ExecuteTaskSolutionAction.h>
 
 #include <actionlib/client/simple_action_client.h>
