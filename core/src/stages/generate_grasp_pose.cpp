@@ -53,6 +53,7 @@ GenerateGraspPose::GenerateGraspPose(const std::string& name) : GeneratePose(nam
 	p.declare<std::string>("eef", "name of end-effector");
 	p.declare<std::string>("object");
 	p.declare<double>("angle_delta", 0.1, "angular steps (rad)");
+	p.declare<int>("object_type");
 
 	p.declare<boost::any>("pregrasp", "pregrasp posture");
 	p.declare<boost::any>("grasp", "grasp posture");
@@ -122,31 +123,97 @@ void GenerateGraspPose::compute() {
 	const std::string& eef = props.get<std::string>("eef");
 	const moveit::core::JointModelGroup* jmg = scene->getRobotModel()->getEndEffector(eef);
 
+
 	robot_state::RobotState& robot_state = scene->getCurrentStateNonConst();
 	robot_state.setToDefaultValues(jmg, props.get<std::string>("pregrasp"));
 
 	geometry_msgs::PoseStamped target_pose_msg;
 	target_pose_msg.header.frame_id = props.get<std::string>("object");
 
-	double current_angle_ = 0.0;
-	while (current_angle_ < 2. * M_PI && current_angle_ > -2. * M_PI) {
-		// rotate object pose about z-axis
-		Eigen::Isometry3d target_pose(Eigen::AngleAxisd(current_angle_, Eigen::Vector3d::UnitZ()));
-		current_angle_ += props.get<double>("angle_delta");
+	if (props.get<int>("object_type") == 1){
+		double current_angle_ = 0.0;
+		while (current_angle_ < M_PI && current_angle_ > -1. * M_PI) {
+			Eigen::Isometry3d target_pose(Eigen::AngleAxisd(current_angle_, Eigen::Vector3d::UnitY()));
+			current_angle_ += props.get<double>("angle_delta");
 
-		InterfaceState state(scene);
-		tf::poseEigenToMsg(target_pose, target_pose_msg.pose);
-		state.properties().set("target_pose", target_pose_msg);
-		props.exposeTo(state.properties(), { "pregrasp", "grasp" });
+			InterfaceState state(scene);
+			tf::poseEigenToMsg(target_pose, target_pose_msg.pose);
+			state.properties().set("target_pose", target_pose_msg);
+			props.exposeTo(state.properties(), { "pregrasp", "grasp" });
 
-		SubTrajectory trajectory;
-		trajectory.setCost(0.0);
-		trajectory.setComment(std::to_string(current_angle_));
+			SubTrajectory trajectory;
+			trajectory.setCost(0.0);
+			trajectory.setComment(std::to_string(current_angle_));
 
-		// add frame at target pose
-		rviz_marker_tools::appendFrame(trajectory.markers(), target_pose_msg, 0.1, "grasp frame");
+			// add frame at target pose
+			rviz_marker_tools::appendFrame(trajectory.markers(), target_pose_msg, 0.1, "grasp frame");
 
-		spawn(std::move(state), std::move(trajectory));
+			spawn(std::move(state), std::move(trajectory));
+		}
+		current_angle_ = 0.0;
+		while (current_angle_ < M_PI && current_angle_ > -1. * M_PI){
+			Eigen::Isometry3d target_pose(Eigen::AngleAxisd(current_angle_, Eigen::Vector3d::UnitX())*Eigen::AngleAxisd(-1 * M_PI/2, Eigen::Vector3d::UnitZ()));
+			current_angle_ += props.get<double>("angle_delta");
+
+			InterfaceState state(scene);
+			tf::poseEigenToMsg(target_pose, target_pose_msg.pose);
+			state.properties().set("target_pose", target_pose_msg);
+			props.exposeTo(state.properties(), { "pregrasp", "grasp" });
+
+			SubTrajectory trajectory;
+			trajectory.setCost(0.0);
+			trajectory.setComment(std::to_string(current_angle_));
+
+			// add frame at target pose
+			rviz_marker_tools::appendFrame(trajectory.markers(), target_pose_msg, 0.1, "grasp frame");
+
+			spawn(std::move(state), std::move(trajectory));
+		}
+	}
+
+	if (props.get<int>("object_type") == 2){
+		double current_angle_ = 0.0;
+		while (current_angle_ < 2* M_PI && current_angle_ > -2. * M_PI){
+			Eigen::Isometry3d target_pose(Eigen::AngleAxisd(current_angle_, Eigen::Vector3d::UnitZ())*Eigen::AngleAxisd(M_PI/3, Eigen::Vector3d::UnitY()));
+			current_angle_ += props.get<double>("angle_delta");
+
+			InterfaceState state(scene);
+			tf::poseEigenToMsg(target_pose, target_pose_msg.pose);
+			state.properties().set("target_pose", target_pose_msg);
+			props.exposeTo(state.properties(), { "pregrasp", "grasp" });
+
+			SubTrajectory trajectory;
+			trajectory.setCost(0.0);
+			trajectory.setComment(std::to_string(current_angle_));
+
+			// add frame at target pose
+			rviz_marker_tools::appendFrame(trajectory.markers(), target_pose_msg, 0.1, "grasp frame");
+
+			spawn(std::move(state), std::move(trajectory));
+		}
+	}
+
+	if (props.get<int>("object_type") == 3){
+		double current_angle_ = 0.0;
+		while (current_angle_ < 2. * M_PI && current_angle_ > -2. * M_PI) {
+			// rotate object pose about z-axis
+			Eigen::Isometry3d target_pose(Eigen::AngleAxisd(current_angle_, Eigen::Vector3d::UnitZ()));
+			current_angle_ += props.get<double>("angle_delta");
+
+			InterfaceState state(scene);
+			tf::poseEigenToMsg(target_pose, target_pose_msg.pose);
+			state.properties().set("target_pose", target_pose_msg);
+			props.exposeTo(state.properties(), { "pregrasp", "grasp" });
+
+			SubTrajectory trajectory;
+			trajectory.setCost(0.0);
+			trajectory.setComment(std::to_string(current_angle_));
+
+			// add frame at target pose
+			rviz_marker_tools::appendFrame(trajectory.markers(), target_pose_msg, 0.1, "grasp frame");
+
+			spawn(std::move(state), std::move(trajectory));
+		}
 	}
 }
 }

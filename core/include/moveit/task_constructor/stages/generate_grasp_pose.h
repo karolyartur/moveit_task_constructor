@@ -55,6 +55,7 @@ public:
 	void setEndEffector(const std::string& eef) { setProperty("eef", eef); }
 	void setObject(const std::string& object) { setProperty("object", object); }
 	void setAngleDelta(double delta) { setProperty("angle_delta", delta); }
+	void setObjectType(int object_type) {setProperty("object_type", object_type);}
 
 	void setPreGraspPose(const std::string& pregrasp) { properties().set("pregrasp", pregrasp); }
 	void setPreGraspPose(const moveit_msgs::RobotState& pregrasp) { properties().set("pregrasp", pregrasp); }
