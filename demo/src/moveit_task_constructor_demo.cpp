@@ -39,6 +39,7 @@
 
 // MTC pick/place demo implementation
 #include <moveit_task_constructor_demo/pick_place_task.h>
+#include <moveit_task_constructor_msgs/Benchmark.h>
 
 #include <geometry_msgs/Pose.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
@@ -47,106 +48,118 @@
 
 constexpr char LOGNAME[] = "moveit_task_constructor_demo";
 
-void spawnObject(moveit::planning_interface::PlanningSceneInterface& psi, const moveit_msgs::CollisionObject& object) {
-	if (!psi.applyCollisionObject(object))
-		throw std::runtime_error("Failed to spawn object: " + object.id);
-}
+class benchmark_server
+{
+	public:
 
-moveit_msgs::CollisionObject createTable() {
+	ros::ServiceServer service;
+	ros::NodeHandle nh;
+	ros::NodeHandle snh;
+	moveit_task_constructor_demo::PickPlaceTask pick_place_task;
+
+	// PARAMS:
+	int object_type = shape_msgs::SolidPrimitive::CYLINDER;
+	int number_of_solutions_per_run = 1;
+
+	benchmark_server();
+
+	void spawnObject(moveit::planning_interface::PlanningSceneInterface& psi, const moveit_msgs::CollisionObject& object) {
+		if (!psi.applyCollisionObject(object))
+			throw std::runtime_error("Failed to spawn object: " + object.id);
+	}
+
+	moveit_msgs::CollisionObject createObject(uint8_t object_type) {
+		ros::NodeHandle pnh("~");
+		std::string object_name, object_reference_frame;
+		std::vector<double> object_dimensions;
+		geometry_msgs::Pose pose;
+		std::size_t error = 0;
+		error += !rosparam_shortcuts::get(LOGNAME, pnh, "object_name", object_name);
+		error += !rosparam_shortcuts::get(LOGNAME, pnh, "object_reference_frame", object_reference_frame);
+		error += !rosparam_shortcuts::get(LOGNAME, pnh, "object_dimensions", object_dimensions);
+		error += !rosparam_shortcuts::get(LOGNAME, pnh, "object_pose", pose);
+		rosparam_shortcuts::shutdownIfError(LOGNAME, error);
+
+		moveit_msgs::CollisionObject object;
+		object.id = object_name;
+		object.header.frame_id = object_reference_frame;
+		object.primitives.resize(1);
+		object.primitives[0].type = object_type;
+		object.primitives[0].dimensions = object_dimensions;
+		pose.position.z += 0.5 * object_dimensions[0];
+		object.primitive_poses.push_back(pose);
+		return object;
+	}
+
+	moveit_msgs::CollisionObject createBox(double dimensions[3], geometry_msgs::Pose pose) {
+		std::vector<double> box_dimensions;
+		box_dimensions.assign(dimensions, dimensions+3);
+		moveit_msgs::CollisionObject object;
+		object.id = "box1";
+		object.header.frame_id = "world";
+		object.primitives.resize(1);
+		object.primitives[0].type = shape_msgs::SolidPrimitive::BOX;
+		object.primitives[0].dimensions = box_dimensions;
+		object.primitive_poses.push_back(pose);
+		return object;
+	}
+
+	bool benchmark(moveit_task_constructor_msgs::Benchmark::Request &req, moveit_task_constructor_msgs::Benchmark::Response &res);
+};
+
+benchmark_server::benchmark_server(): pick_place_task("pick_place_task", benchmark_server::nh){	
+
+	ros::Duration(1.0).sleep();  // Wait for ApplyPlanningScene service
+	moveit::planning_interface::PlanningSceneInterface psi;
 	ros::NodeHandle pnh("~");
-	std::string table_name, table_reference_frame;
-	std::vector<double> table_dimensions;
+
+	spawnObject(psi, createObject(object_type));
+
 	geometry_msgs::Pose pose;
-	std::size_t errors = 0;
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "table_name", table_name);
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "table_reference_frame", table_reference_frame);
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "table_dimensions", table_dimensions);
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "table_pose", pose);
-	rosparam_shortcuts::shutdownIfError(LOGNAME, errors);
-
-	moveit_msgs::CollisionObject object;
-	object.id = table_name;
-	object.header.frame_id = table_reference_frame;
-	object.primitives.resize(1);
-	object.primitives[0].type = shape_msgs::SolidPrimitive::BOX;
-	object.primitives[0].dimensions = table_dimensions;
-	pose.position.z -= 0.5 * table_dimensions[2];  // align surface with world
-	object.primitive_poses.push_back(pose);
-	return object;
-}
-
-moveit_msgs::CollisionObject createObject() {
-	ros::NodeHandle pnh("~");
-	std::string object_name, object_reference_frame;
-	std::vector<double> object_dimensions;
-	geometry_msgs::Pose pose;
-	std::size_t error = 0;
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "object_name", object_name);
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "object_reference_frame", object_reference_frame);
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "object_dimensions", object_dimensions);
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "object_pose", pose);
-	rosparam_shortcuts::shutdownIfError(LOGNAME, error);
-
-	moveit_msgs::CollisionObject object;
-	object.id = object_name;
-	object.header.frame_id = object_reference_frame;
-	object.primitives.resize(1);
-	object.primitives[0].type = shape_msgs::SolidPrimitive::CYLINDER;
-	object.primitives[0].dimensions = object_dimensions;
-	pose.position.z += 0.5 * object_dimensions[0];
-	object.primitive_poses.push_back(pose);
-	return object;
-}
-
-moveit_msgs::CollisionObject createBox() {
-	geometry_msgs::Pose pose;
-	std::vector<double> object_dimensions;
 	double dimensions[3] = {0.25, 0.25, 0.5};
-	object_dimensions.assign(dimensions, dimensions+3);
 	pose.position.x = 0.5;
 	pose.position.y = 0.0;
-	pose.position.z += 0.5 * object_dimensions[2];
-	moveit_msgs::CollisionObject object;
-	object.id = "box1";
-	object.header.frame_id = "world";
-	object.primitives.resize(1);
-	object.primitives[0].type = shape_msgs::SolidPrimitive::BOX;
-	object.primitives[0].dimensions = object_dimensions;
-	object.primitive_poses.push_back(pose);
-	return object;
+	pose.position.z += 0.5 * dimensions[2];
+
+	spawnObject(psi, createBox(dimensions, pose));
+
+	service = benchmark_server::snh.advertiseService("benchmark", &benchmark_server::benchmark, this);
+	ROS_INFO("end");
+}
+
+bool benchmark_server::benchmark(moveit_task_constructor_msgs::Benchmark::Request &req, moveit_task_constructor_msgs::Benchmark::Response &res)
+{
+	std::vector<float> durations;
+	std::vector<ros::Time> start_times;
+	benchmark_server::pick_place_task.loadParameters();
+	benchmark_server::pick_place_task.init(object_type);
+	std::vector<moveit_task_constructor_msgs::Solution> solutions;
+	moveit_task_constructor_msgs::Solution sol;
+	for (int i = 0; i < req.number_of_runs; i++)
+	{
+		ros::WallTime start_time = ros::WallTime::now();
+		if (benchmark_server::pick_place_task.plan(number_of_solutions_per_run)) {
+			ROS_INFO_NAMED(LOGNAME, "Planning succeeded");
+			sol = pick_place_task.getSolution();
+			solutions.push_back(sol);
+		} else {
+			ROS_INFO_NAMED(LOGNAME, "Planning failed");
+		}
+		double duration = (ros::WallTime::now() - start_time).toSec();
+		durations.push_back(duration);
+		start_times.push_back(ros::Time(start_time.sec, start_time.nsec));
+	}
+	res.durations = durations;
+	res.start_times = start_times;
+	res.solutions = solutions;
 }
 
 int main(int argc, char** argv) {
 	ROS_INFO_NAMED(LOGNAME, "Init moveit_task_constructor_demo");
 	ros::init(argc, argv, "moveit_task_constructor_demo");
-	ros::NodeHandle nh;
+	benchmark_server s;
 	ros::AsyncSpinner spinner(1);
 	spinner.start();
-
-	// Add table and object to planning scene
-	ros::Duration(1.0).sleep();  // Wait for ApplyPlanningScene service
-	moveit::planning_interface::PlanningSceneInterface psi;
-	ros::NodeHandle pnh("~");
-	if (pnh.param("spawn_table", true))
-		spawnObject(psi, createTable());
-	spawnObject(psi, createObject());
-	spawnObject(psi, createBox());
-
-	// Construct and run pick/place task
-	moveit_task_constructor_demo::PickPlaceTask pick_place_task("pick_place_task", nh);
-	pick_place_task.loadParameters();
-	pick_place_task.init();
-	if (pick_place_task.plan()) {
-		ROS_INFO_NAMED(LOGNAME, "Planning succeded");
-		if (pnh.param("execute", false)) {
-			pick_place_task.execute();
-			ROS_INFO_NAMED(LOGNAME, "Execution complete");
-		} else {
-			ROS_INFO_NAMED(LOGNAME, "Execution disabled");
-		}
-	} else {
-		ROS_INFO_NAMED(LOGNAME, "Planning failed");
-	}
 
 	// Keep introspection alive
 	ros::waitForShutdown();

@@ -1,15 +1,7 @@
 <?xml version="1.0"?>
 <launch>
-  <arg name="bench_opts" default="$(find moveit_ros_benchmarks)/examples/demo1.yaml"/>
-
-  <include ns="mtc_tutorial/ompl" file="$(find moveit_resources)/panda_moveit_config/launch/planning_pipeline.launch.xml">
-    <arg name="pipeline" value="ompl" />
-  </include>
-
   <!-- Run MTC pick and place -->
   <node name="mtc_tutorial" pkg="moveit_task_constructor_demo" type="moveit_task_constructor_demo" output="screen">
-    <param name="execute" value="true" />
     <rosparam command="load" file="$(find moveit_task_constructor_demo)/config/panda_config.yaml" />
-    <rosparam command="load" file="$(arg bench_opts)"/>
   </node>
 </launch>

@@ -80,6 +80,10 @@ public:
 		setProperty("path_constraints", std::move(path_constraints));
 	}
 
+	void isConstrained(bool is_constrained) { //
+		setProperty("is_constrained", is_constrained); //
+	}
+
 	void reset() override;
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 	void compute(const InterfaceState& from, const InterfaceState& to) override;

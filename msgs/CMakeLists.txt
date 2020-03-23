@@ -23,6 +23,7 @@ add_message_files(DIRECTORY msg FILES
 
 add_service_files(DIRECTORY srv FILES
 	GetSolution.srv
+	Benchmark.srv
 )
 
 add_action_files(DIRECTORY action FILES

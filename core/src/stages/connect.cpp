@@ -40,6 +40,8 @@
 #include <moveit/task_constructor/merge.h>
 #include <moveit/planning_scene/planning_scene.h>
 
+#include <eigen_conversions/eigen_msg.h> //
+
 namespace moveit {
 namespace task_constructor {
 namespace stages {
@@ -50,6 +52,8 @@ Connect::Connect(const std::string& name, const GroupPlannerVector& planners) : 
 	p.declare<MergeMode>("merge_mode", WAYPOINTS, "merge mode");
 	p.declare<moveit_msgs::Constraints>("path_constraints", moveit_msgs::Constraints(),
 	                                    "constraints to maintain during trajectory");
+
+	p.declare<bool>("is_constrained",false); //
 }
 
 void Connect::reset() {
@@ -135,7 +139,31 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 	const auto& props = properties();
 	double timeout = this->timeout();
 	MergeMode mode = props.get<MergeMode>("merge_mode");
+
 	const auto& path_constraints = props.get<moveit_msgs::Constraints>("path_constraints");
+	moveit_msgs::Constraints con;
+
+	if (props.get<bool>("is_constrained")) {
+		const robot_state::RobotState& robot_state = from.scene()->getCurrentState();
+		const Eigen::Affine3d& transform = robot_state.getFrameTransform("panda_link8");
+		geometry_msgs::Pose p;
+		tf::poseEigenToMsg(transform, p);
+		geometry_msgs::PoseStamped pose;
+		pose.header.frame_id = "world";
+		pose.pose = p;
+		std::string link_name = "panda_link8";
+
+		con.orientation_constraints.resize(1);
+		moveit_msgs::OrientationConstraint& ocm = con.orientation_constraints[0];
+		ocm.link_name = link_name;
+		ocm.header = pose.header;
+		ocm.orientation = pose.pose.orientation;
+		ocm.absolute_x_axis_tolerance = 0.01;
+		ocm.absolute_y_axis_tolerance = 0.01;
+		ocm.absolute_z_axis_tolerance = 0.01;
+		ocm.weight = 1.0;
+	}
+	const auto& path_constraints_on = con;
 
 	const moveit::core::RobotState& final_goal_state = to.scene()->getCurrentState();
 	std::vector<robot_trajectory::RobotTrajectoryConstPtr> sub_trajectories;
@@ -157,7 +185,13 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 		intermediate_scenes.push_back(end);
 
 		robot_trajectory::RobotTrajectoryPtr trajectory;
-		success = pair.second->plan(start, end, jmg, timeout, trajectory, path_constraints);
+		if (props.get<bool>("is_constrained")) {
+			success = pair.second->plan(start, end, jmg, timeout, trajectory, path_constraints_on);
+		}
+		else
+		{
+			success = pair.second->plan(start, end, jmg, timeout, trajectory, path_constraints);
+		}
 		sub_trajectories.push_back(trajectory);  // include failed trajectory
 
 		if (!success)

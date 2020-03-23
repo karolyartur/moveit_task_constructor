@@ -1,0 +1,7 @@
+uint32 number_of_runs
+
+---
+
+float32[] durations
+time[] start_times
+Solution[] solutions

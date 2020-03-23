@@ -57,7 +57,6 @@
 #include <moveit/task_constructor/stages/predicate_filter.h>
 #include <moveit/task_constructor/solvers/cartesian_path.h>
 #include <moveit/task_constructor/solvers/pipeline_planner.h>
-#include <moveit/task_constructor/solvers/benchmark_planner.h>
 #include <moveit_task_constructor_msgs/ExecuteTaskSolutionAction.h>
 
 #include <actionlib/client/simple_action_client.h>
@@ -78,11 +77,13 @@ public:
 
 	void loadParameters();
 
-	void init();
+	void init(int object_type);
 
-	bool plan();
+	bool plan(int number_of_solutions_per_run);
 
 	bool execute();
+
+	moveit_task_constructor_msgs::Solution getSolution();
 
 private:
 	ros::NodeHandle nh_;
