@@ -145,22 +145,22 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 
 	if (props.get<bool>("is_constrained")) {
 		const robot_state::RobotState& robot_state = from.scene()->getCurrentState();
-		const Eigen::Affine3d& transform = robot_state.getFrameTransform("panda_link8");
+		const Eigen::Affine3d& transform = robot_state.getFrameTransform("panda_hand");
 		geometry_msgs::Pose p;
 		tf::poseEigenToMsg(transform, p);
 		geometry_msgs::PoseStamped pose;
 		pose.header.frame_id = "world";
 		pose.pose = p;
-		std::string link_name = "panda_link8";
+		std::string link_name = "panda_hand";
 
 		con.orientation_constraints.resize(1);
 		moveit_msgs::OrientationConstraint& ocm = con.orientation_constraints[0];
 		ocm.link_name = link_name;
 		ocm.header = pose.header;
 		ocm.orientation = pose.pose.orientation;
-		ocm.absolute_x_axis_tolerance = 0.01;
-		ocm.absolute_y_axis_tolerance = 0.01;
-		ocm.absolute_z_axis_tolerance = 0.01;
+		ocm.absolute_x_axis_tolerance = 4;
+		ocm.absolute_y_axis_tolerance = 0.3;
+		ocm.absolute_z_axis_tolerance = 0.3;
 		ocm.weight = 1.0;
 	}
 	const auto& path_constraints_on = con;

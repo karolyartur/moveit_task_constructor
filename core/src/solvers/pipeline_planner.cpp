@@ -94,7 +94,6 @@ bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
 	const auto& props = properties();
 	moveit_msgs::MotionPlanRequest req;
 	initMotionPlanRequest(req, props, jmg, timeout);
-
 	req.goal_constraints.resize(1);
 	req.goal_constraints[0] = kinematic_constraints::constructGoalConstraints(to->getCurrentState(), jmg,
 	                                                                          props.get<double>("goal_joint_tolerance"));

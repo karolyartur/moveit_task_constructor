@@ -77,9 +77,9 @@ public:
 
 	void loadParameters();
 
-	void init(int object_type);
+	void init(int object_type, bool is_path_constrained);
 
-	bool plan(int number_of_solutions_per_run);
+	bool plan(int number_of_solutions_per_run, int timeout);
 
 	bool execute();
 
@@ -103,7 +103,9 @@ private:
 	std::string surface_link_;
 	std::string object_name_;
 	std::string world_frame_;
-	std::vector<double> object_dimensions_;
+	std::vector<double> box_dimensions;
+	std::vector<double> cylinder_dimensions;
+	std::vector<double> sphere_dimensions;
 
 	// Predefined pose targets
 	std::string hand_open_pose_;

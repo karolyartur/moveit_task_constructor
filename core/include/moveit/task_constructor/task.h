@@ -116,7 +116,7 @@ public:
 	void init();
 
 	/// reset, init scene (if not yet done), and init all stages, then start planning
-	bool plan(size_t max_solutions = 0);
+	bool plan(size_t max_solutions = 0, int timeout = 0);
 	/// interrupt current planning (or execution)
 	void preempt();
 	/// execute solution

@@ -67,22 +67,18 @@ void PickPlaceTask::loadParameters() {
 
 	// Target object
 	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "object_name", object_name_);
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "object_dimensions", object_dimensions_);
 	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "object_reference_frame", object_reference_frame_);
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "surface_link", surface_link_);
-	support_surfaces_ = { surface_link_ };
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "box_dimensions", box_dimensions);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "cylinder_dimensions", cylinder_dimensions);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "sphere_dimensions", sphere_dimensions);
+	//support_surfaces_ = { surface_link_ };
 
 	// Pick/Place metrics
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "approach_object_min_dist", approach_object_min_dist_);
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "approach_object_max_dist", approach_object_max_dist_);
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "lift_object_min_dist", lift_object_min_dist_);
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "lift_object_max_dist", lift_object_max_dist_);
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "place_surface_offset", place_surface_offset_);
 	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "place_pose", place_pose_);
 	rosparam_shortcuts::shutdownIfError(LOGNAME, errors);
 }
 
-void PickPlaceTask::init(int object_type) {
+void PickPlaceTask::init(int object_type, bool is_path_constrained) {
 	ROS_INFO_NAMED(LOGNAME, "Initializing task pipeline");
 	const std::string object = object_name_;
 
@@ -96,16 +92,9 @@ void PickPlaceTask::init(int object_type) {
 	t.loadRobotModel();
 
 	// Sampling planner
-	// auto sampling_planner = std::make_shared<solvers::BenchmarkPlanner>();
-	auto sampling_planner = std::make_shared<solvers::PipelinePlanner>();
-	// sampling_planner->setPlannerId("CHOMP");
-	sampling_planner->setProperty("goal_joint_tolerance", 1e-5);
-
-	// Cartesian planner
-	auto cartesian_planner = std::make_shared<solvers::CartesianPath>();
-	cartesian_planner->setMaxVelocityScaling(1.0);
-	cartesian_planner->setMaxAccelerationScaling(1.0);
-	cartesian_planner->setStepSize(.01);
+	auto pipeline_planner = std::make_shared<solvers::PipelinePlanner>();
+	//pipeline_planner->setPlannerId("LBKPIECEkConfigDefault");
+	pipeline_planner->setProperty("goal_joint_tolerance", 1e-5);
 
 	// Set task properties
 	t.setProperty("group", arm_group_name_);
@@ -138,18 +127,6 @@ void PickPlaceTask::init(int object_type) {
 		t.add(std::move(applicability_filter));
 	}
 
-	// /****************************************************
-	//  *                                                  *
-	//  *               Open Hand                          *
-	//  *                                                  *
-	//  ***************************************************/
-	// {  // Open Hand
-	// 	auto stage = std::make_unique<stages::MoveTo>("open hand", hand_planner);
-	// 	stage->setGroup(hand_group_name_);
-	// 	stage->setGoal(hand_open_pose_);
-	// 	t.add(std::move(stage));
-	// }
-
 	/****************************************************
 	 *                                                  *
 	 *               Move to Pick                       *
@@ -157,7 +134,7 @@ void PickPlaceTask::init(int object_type) {
 	 ***************************************************/
 	{  // Move-to pre-grasp
 		auto stage = std::make_unique<stages::Connect>(
-		    "move to pick", stages::Connect::GroupPlannerVector{ { arm_group_name_, sampling_planner } });
+		    "move to pick", stages::Connect::GroupPlannerVector{ { arm_group_name_, pipeline_planner } });
 		stage->setTimeout(5.0);
 		stage->properties().configureInitFrom(Stage::PARENT);
 		t.add(std::move(stage));
@@ -174,24 +151,6 @@ void PickPlaceTask::init(int object_type) {
 		t.properties().exposeTo(grasp->properties(), { "eef", "hand", "group", "ik_frame" });
 		grasp->properties().configureInitFrom(Stage::PARENT, { "eef", "hand", "group", "ik_frame" });
 
-		/****************************************************
-  ---- *               Approach Object                    *
-		 ***************************************************/
-		{
-			auto stage = std::make_unique<stages::MoveRelative>("approach object", sampling_planner);
-			stage->properties().set("marker_ns", "approach_object");
-			stage->properties().set("link", hand_frame_);
-			stage->properties().configureInitFrom(Stage::PARENT, { "group" });
-			stage->setMinMaxDistance(approach_object_min_dist_, approach_object_max_dist_);
-
-			// Set hand forward direction
-			geometry_msgs::Vector3Stamped vec;
-			vec.header.frame_id = hand_frame_;
-			vec.vector.z = 1.0;
-			stage->setDirection(vec);
-
-			grasp->insert(std::move(stage));
-		}
 
 		/****************************************************
   ---- *               Generate Grasp Pose                *
@@ -228,16 +187,6 @@ void PickPlaceTask::init(int object_type) {
 			grasp->insert(std::move(stage));
 		}
 
-// 		/****************************************************
-//   ---- *               Close Hand                      *
-// 		 ***************************************************/
-// 		{
-// 			auto stage = std::make_unique<stages::MoveTo>("close hand", hand_planner);
-// 			stage->properties().property("group").configureInitFrom(Stage::PARENT, hand_group_name_);
-// 			stage->setGoal(hand_close_pose_);
-// 			grasp->insert(std::move(stage));
-// 		}
-
 		/****************************************************
   .... *               Attach Object                      *
 		 ***************************************************/
@@ -245,42 +194,6 @@ void PickPlaceTask::init(int object_type) {
 			auto stage = std::make_unique<stages::ModifyPlanningScene>("attach object");
 			stage->attachObject(object, hand_frame_);
 			attach_object_stage = stage.get();
-			grasp->insert(std::move(stage));
-		}
-
-		/****************************************************
-  .... *               Allow collision (object support)   *
-		 ***************************************************/
-		{
-			auto stage = std::make_unique<stages::ModifyPlanningScene>("allow collision (object,support)");
-			stage->allowCollisions({ object }, support_surfaces_, true);
-			grasp->insert(std::move(stage));
-		}
-
-		/****************************************************
-  .... *               Lift object                        *
-		 ***************************************************/
-		{
-			auto stage = std::make_unique<stages::MoveRelative>("lift object", sampling_planner);
-			stage->properties().configureInitFrom(Stage::PARENT, { "group" });
-			stage->setMinMaxDistance(lift_object_min_dist_, lift_object_max_dist_);
-			stage->setIKFrame(hand_frame_);
-			stage->properties().set("marker_ns", "lift_object");
-
-			// Set upward direction
-			geometry_msgs::Vector3Stamped vec;
-			vec.header.frame_id = world_frame_;
-			vec.vector.z = 1.0;
-			stage->setDirection(vec);
-			grasp->insert(std::move(stage));
-		}
-
-		/****************************************************
-  .... *               Forbid collision (object support)  *
-		 ***************************************************/
-		{
-			auto stage = std::make_unique<stages::ModifyPlanningScene>("forbid collision (object,surface)");
-			stage->allowCollisions({ object }, support_surfaces_, false);
 			grasp->insert(std::move(stage));
 		}
 
@@ -295,10 +208,10 @@ void PickPlaceTask::init(int object_type) {
 	 *****************************************************/
 	{
 		auto stage = std::make_unique<stages::Connect>(
-		    "move to place", stages::Connect::GroupPlannerVector{ { arm_group_name_, sampling_planner } });
+		    "move to place", stages::Connect::GroupPlannerVector{ { arm_group_name_, pipeline_planner } });
 		stage->setTimeout(5.0);
 		stage->properties().configureInitFrom(Stage::PARENT);
-		stage->isConstrained(false);
+		stage->isConstrained(is_path_constrained);
 		t.add(std::move(stage));
 	}
 
@@ -311,24 +224,6 @@ void PickPlaceTask::init(int object_type) {
 		auto place = std::make_unique<SerialContainer>("place object");
 		t.properties().exposeTo(place->properties(), { "eef", "hand", "group" });
 		place->properties().configureInitFrom(Stage::PARENT, { "eef", "hand", "group" });
-
-		/******************************************************
-  ---- *          Lower Object                              *
-		 *****************************************************/
-		{
-			auto stage = std::make_unique<stages::MoveRelative>("lower object", sampling_planner);
-			stage->properties().set("marker_ns", "lower_object");
-			stage->properties().set("link", hand_frame_);
-			stage->properties().configureInitFrom(Stage::PARENT, { "group" });
-			stage->setMinMaxDistance(.1, .15);
-
-			// Set downward direction
-			geometry_msgs::Vector3Stamped vec;
-			vec.header.frame_id = world_frame_;
-			vec.vector.z = -1.0;
-			stage->setDirection(vec);
-			place->insert(std::move(stage));
-		}
 
 		/******************************************************
   ---- *          Generate Place Pose                       *
@@ -344,7 +239,15 @@ void PickPlaceTask::init(int object_type) {
 			geometry_msgs::PoseStamped p;
 			p.header.frame_id = object_reference_frame_;
 			p.pose = place_pose_;
-			p.pose.position.z += 0.5 * object_dimensions_[0] + place_surface_offset_;
+			if (object_type == 1){
+				p.pose.position.z +=  0.5 * box_dimensions[2];
+			}
+			else if (object_type == 2){
+				p.pose.position.z += sphere_dimensions[0];
+			}
+			else if (object_type == 3){
+				p.pose.position.z += 0.5 * cylinder_dimensions[0];
+			}
 			stage->setPose(p);
 			stage->setMonitoredStage(attach_object_stage);  // Hook into attach_object_stage
 
@@ -356,16 +259,6 @@ void PickPlaceTask::init(int object_type) {
 			wrapper->properties().configureInitFrom(Stage::INTERFACE, { "target_pose" });
 			place->insert(std::move(wrapper));
 		}
-
-// 		/******************************************************
-//   ---- *          Open Hand                              *
-// 		 *****************************************************/
-// 		{
-// 			auto stage = std::make_unique<stages::MoveTo>("open hand", hand_planner);
-// 			stage->properties().property("group").configureInitFrom(Stage::PARENT, hand_group_name_);
-// 			stage->setGoal(hand_open_pose_);
-// 			place->insert(std::move(stage));
-// 		}
 
 		/******************************************************
   ---- *          Forbid collision (hand, object)        *
@@ -387,22 +280,6 @@ void PickPlaceTask::init(int object_type) {
 			place->insert(std::move(stage));
 		}
 
-		/******************************************************
-  ---- *          Retreat Motion                            *
-		 *****************************************************/
-		{
-			auto stage = std::make_unique<stages::MoveRelative>("retreat after place", sampling_planner);
-			stage->properties().configureInitFrom(Stage::PARENT, { "group" });
-			stage->setMinMaxDistance(.1, .15);
-			stage->setIKFrame(hand_frame_);
-			stage->properties().set("marker_ns", "retreat");
-			geometry_msgs::Vector3Stamped vec;
-			vec.header.frame_id = hand_frame_;
-			vec.vector.z = -1.0;
-			stage->setDirection(vec);
-			place->insert(std::move(stage));
-		}
-
 		// Add place container to task
 		t.add(std::move(place));
 	}
@@ -413,7 +290,7 @@ void PickPlaceTask::init(int object_type) {
 	 *                                                    *
 	 *****************************************************/
 	{
-		auto stage = std::make_unique<stages::MoveTo>("move home", sampling_planner);
+		auto stage = std::make_unique<stages::MoveTo>("move home", pipeline_planner);
 		stage->properties().configureInitFrom(Stage::PARENT, { "group" });
 		stage->setGoal(arm_home_pose_);
 		stage->restrictDirection(stages::MoveTo::FORWARD);
@@ -421,12 +298,12 @@ void PickPlaceTask::init(int object_type) {
 	}
 }
 
-bool PickPlaceTask::plan(int number_of_solutions_per_run) {
+bool PickPlaceTask::plan(int number_of_solutions_per_run, int timeout) {
 	ROS_INFO_NAMED(LOGNAME, "Start searching for task solutions");
 	ros::NodeHandle pnh("~");
 
 	try {
-		task_->plan(number_of_solutions_per_run);
+		task_->plan(number_of_solutions_per_run, timeout);
 	} catch (InitStageException& e) {
 		ROS_ERROR_STREAM_NAMED(LOGNAME, "Initialization failed: " << e);
 		return false;

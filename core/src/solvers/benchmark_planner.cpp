@@ -32,68 +32,68 @@ BenchmarkPlanner::BenchmarkPlanner(): benchmark(), opts(ros::this_node::getName(
 	benchmark.initialize(planning_pipelines);
 }
 
-void BenchmarkPlanner::init(const core::RobotModelConstPtr& robot_model) {
-	planner_ = Task::createPlanner(robot_model);
+// void BenchmarkPlanner::init(const core::RobotModelConstPtr& robot_model) {
+// 	planner_ = Task::createPlanner(robot_model);
 
-	planner_->displayComputedMotionPlans(properties().get<bool>("display_motion_plans"));
-	planner_->publishReceivedRequests(properties().get<bool>("publish_planning_requests"));
-}
+// 	planner_->displayComputedMotionPlans(properties().get<bool>("display_motion_plans"));
+// 	planner_->publishReceivedRequests(properties().get<bool>("publish_planning_requests"));
+// }
 
-void initMotionPlanRequest_2(moveit_msgs::MotionPlanRequest& req, const PropertyMap& p,
-                           const moveit::core::JointModelGroup* jmg, double timeout) {
-	req.group_name = jmg->getName();
-	req.planner_id = p.get<std::string>("planner");
-	req.allowed_planning_time = timeout;
-	req.start_state.is_diff = true;  // we don't specify an extra start state
+// void initMotionPlanRequest_2(moveit_msgs::MotionPlanRequest& req, const PropertyMap& p,
+//                            const moveit::core::JointModelGroup* jmg, double timeout) {
+// 	req.group_name = jmg->getName();
+// 	req.planner_id = p.get<std::string>("planner");
+// 	req.allowed_planning_time = timeout;
+// 	req.start_state.is_diff = true;  // we don't specify an extra start state
 
-	req.num_planning_attempts = p.get<uint>("num_planning_attempts");
-	req.max_velocity_scaling_factor = p.get<double>("max_velocity_scaling_factor");
-	req.max_acceleration_scaling_factor = p.get<double>("max_acceleration_scaling_factor");
-	req.workspace_parameters = p.get<moveit_msgs::WorkspaceParameters>("workspace_parameters");
-}
+// 	req.num_planning_attempts = p.get<uint>("num_planning_attempts");
+// 	req.max_velocity_scaling_factor = p.get<double>("max_velocity_scaling_factor");
+// 	req.max_acceleration_scaling_factor = p.get<double>("max_acceleration_scaling_factor");
+// 	req.workspace_parameters = p.get<moveit_msgs::WorkspaceParameters>("workspace_parameters");
+// }
 
-bool BenchmarkPlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
-                           const planning_scene::PlanningSceneConstPtr& to, const moveit::core::JointModelGroup* jmg,
-                           double timeout, robot_trajectory::RobotTrajectoryPtr& result,
-                           const moveit_msgs::Constraints& path_constraints) {
-	const auto& props = properties();
-	moveit_msgs::MotionPlanRequest req;
-	initMotionPlanRequest_2(req, props, jmg, timeout);
+// bool BenchmarkPlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
+//                            const planning_scene::PlanningSceneConstPtr& to, const moveit::core::JointModelGroup* jmg,
+//                            double timeout, robot_trajectory::RobotTrajectoryPtr& result,
+//                            const moveit_msgs::Constraints& path_constraints) {
+// 	const auto& props = properties();
+// 	moveit_msgs::MotionPlanRequest req;
+// 	initMotionPlanRequest_2(req, props, jmg, timeout);
 
-	req.goal_constraints.resize(1);
-	req.goal_constraints[0] = kinematic_constraints::constructGoalConstraints(to->getCurrentState(), jmg,
-	                                                                          props.get<double>("goal_joint_tolerance"));
-	req.path_constraints = path_constraints;
+// 	req.goal_constraints.resize(1);
+// 	req.goal_constraints[0] = kinematic_constraints::constructGoalConstraints(to->getCurrentState(), jmg,
+// 	                                                                          props.get<double>("goal_joint_tolerance"));
+// 	req.path_constraints = path_constraints;
 
-	::planning_interface::MotionPlanResponse res;
-	bool success = planner_->generatePlan(from, req, res);
-	result = res.trajectory_;
-	return success;
-}
+// 	::planning_interface::MotionPlanResponse res;
+// 	bool success = planner_->generatePlan(from, req, res);
+// 	result = res.trajectory_;
+// 	return success;
+// }
 
-bool BenchmarkPlanner::plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
-                           const Eigen::Isometry3d& target_eigen, const moveit::core::JointModelGroup* jmg,
-                           double timeout, robot_trajectory::RobotTrajectoryPtr& result,
-                           const moveit_msgs::Constraints& path_constraints) {
-	const auto& props = properties();
-	moveit_msgs::MotionPlanRequest req;
-	initMotionPlanRequest_2(req, props, jmg, timeout);
+// bool BenchmarkPlanner::plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
+//                            const Eigen::Isometry3d& target_eigen, const moveit::core::JointModelGroup* jmg,
+//                            double timeout, robot_trajectory::RobotTrajectoryPtr& result,
+//                            const moveit_msgs::Constraints& path_constraints) {
+// 	const auto& props = properties();
+// 	moveit_msgs::MotionPlanRequest req;
+// 	initMotionPlanRequest_2(req, props, jmg, timeout);
 
-	geometry_msgs::PoseStamped target;
-	target.header.frame_id = from->getPlanningFrame();
-	tf::poseEigenToMsg(target_eigen, target.pose);
+// 	geometry_msgs::PoseStamped target;
+// 	target.header.frame_id = from->getPlanningFrame();
+// 	tf::poseEigenToMsg(target_eigen, target.pose);
 
-	req.goal_constraints.resize(1);
-	req.goal_constraints[0] = kinematic_constraints::constructGoalConstraints(
-	    link.getName(), target, props.get<double>("goal_position_tolerance"),
-	    props.get<double>("goal_orientation_tolerance"));
-	req.path_constraints = path_constraints;
+// 	req.goal_constraints.resize(1);
+// 	req.goal_constraints[0] = kinematic_constraints::constructGoalConstraints(
+// 	    link.getName(), target, props.get<double>("goal_position_tolerance"),
+// 	    props.get<double>("goal_orientation_tolerance"));
+// 	req.path_constraints = path_constraints;
 
-	::planning_interface::MotionPlanResponse res;
-	bool success = planner_->generatePlan(from, req, res);
-	result = res.trajectory_;
-	return success;
-}
+// 	::planning_interface::MotionPlanResponse res;
+// 	bool success = planner_->generatePlan(from, req, res);
+// 	result = res.trajectory_;
+// 	return success;
+// }
 }
 }
 }

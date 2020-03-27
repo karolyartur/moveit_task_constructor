@@ -47,6 +47,7 @@
 #include <moveit/planning_pipeline/planning_pipeline.h>
 
 #include <functional>
+#include <chrono> 
 
 namespace {
 std::string rosNormalizeName(const std::string& name) {
@@ -281,19 +282,26 @@ void Task::compute() {
 	stages()->pimpl()->runCompute();
 }
 
-bool Task::plan(size_t max_solutions) {
+bool Task::plan(size_t max_solutions, int timeout) {
 	auto impl = pimpl();
 	reset();
 	init();
 
 	impl->preempt_requested_ = false;
+	bool is_timeout = false;
+	auto start = std::chrono::high_resolution_clock::now();
 	while (ros::ok() && !impl->preempt_requested_ && canCompute() &&
-	       (max_solutions == 0 || numSolutions() < max_solutions)) {
+	       (max_solutions == 0 || numSolutions() < max_solutions) && !is_timeout) {
 		compute();
 		for (const auto& cb : impl->task_cbs_)
 			cb(*this);
 		if (impl->introspection_)
 			impl->introspection_->publishTaskState();
+		auto current = std::chrono::high_resolution_clock::now();
+		auto duration = std::chrono::duration_cast<std::chrono::seconds>(current - start);
+		if (duration.count() >= timeout){
+			is_timeout = true;
+		}
 	}
 	printState();
 	return numSolutions() > 0;

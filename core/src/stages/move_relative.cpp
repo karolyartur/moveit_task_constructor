@@ -114,25 +114,25 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 	const std::string& group = props.get<std::string>("group");
 
 	//-----------------------
-	const robot_state::RobotState& robot_state = state.scene()->getCurrentState();
-	const Eigen::Affine3d& transform = robot_state.getFrameTransform("panda_link8");
-	geometry_msgs::Pose p;
-	tf::poseEigenToMsg(transform, p);
-	geometry_msgs::PoseStamped pose;
-	pose.header.frame_id = "world";
-	pose.pose = p;
-	moveit_msgs::Constraints con;
-	std::string link_name = "panda_link8";
+	// const robot_state::RobotState& robot_state = state.scene()->getCurrentState();
+	// const Eigen::Affine3d& transform = robot_state.getFrameTransform("panda_link8");
+	// geometry_msgs::Pose p;
+	// tf::poseEigenToMsg(transform, p);
+	// geometry_msgs::PoseStamped pose;
+	// pose.header.frame_id = "world";
+	// pose.pose = p;
+	// moveit_msgs::Constraints con;
+	// std::string link_name = "panda_link8";
 
-	con.orientation_constraints.resize(1);
-	moveit_msgs::OrientationConstraint& ocm = con.orientation_constraints[0];
-	ocm.link_name = link_name;
-	ocm.header = pose.header;
-	ocm.orientation = pose.pose.orientation;
-	ocm.absolute_x_axis_tolerance = 0.01;
-	ocm.absolute_y_axis_tolerance = 0.01;
-	ocm.absolute_z_axis_tolerance = 0.01;
-	ocm.weight = 1.0;
+	// con.orientation_constraints.resize(1);
+	// moveit_msgs::OrientationConstraint& ocm = con.orientation_constraints[0];
+	// ocm.link_name = link_name;
+	// ocm.header = pose.header;
+	// ocm.orientation = pose.pose.orientation;
+	// ocm.absolute_x_axis_tolerance = 0.05;
+	// ocm.absolute_y_axis_tolerance = 0.05;
+	// ocm.absolute_z_axis_tolerance = 0.05;
+	// ocm.weight = 1.0;
 	//-------------------------------------
 
 	const moveit::core::JointModelGroup* jmg = robot_model->getJointModelGroup(group);
@@ -148,8 +148,8 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 
 	double max_distance = props.get<double>("max_distance");
 	double min_distance = props.get<double>("min_distance");
-	// const auto& path_constraints = props.get<moveit_msgs::Constraints>("path_constraints");
-	const auto& path_constraints = con;
+	const auto& path_constraints = props.get<moveit_msgs::Constraints>("path_constraints");
+	// const auto& path_constraints = con;
 
 	robot_trajectory::RobotTrajectoryPtr robot_trajectory;
 	bool success = false;
