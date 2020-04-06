@@ -143,12 +143,12 @@ benchmark_server::benchmark_server(): pick_place_task("pick_place_task", benchma
 	std::size_t error = 0;
 	error += !rosparam_shortcuts::get(LOGNAME, pnh, "object_types", object_types);
 
-	//constraints.push_back(true);
-	constraints.push_back(false);
+	constraints.push_back(true);
+	// constraints.push_back(false);
 
 	//waypoints.push_back(0.02);
-	//waypoints.push_back(0.05);
-	waypoints.push_back(0.0);
+    waypoints.push_back(0.05);
+	//waypoints.push_back(0.0);
 
 	rosparam_shortcuts::shutdownIfError(LOGNAME, error);
 
@@ -181,7 +181,7 @@ bool benchmark_server::benchmark(moveit_task_constructor_msgs::Benchmark::Reques
 			for (bool is_path_constrained : constraints){
 				spawnObject(psi, createObject(object_type));
 
-				// spawnObject(psi, createBox());
+				spawnObject(psi, createBox());
 
 				benchmark_server::pick_place_task.loadParameters();
 				benchmark_server::pick_place_task.init(object_type, is_path_constrained);
@@ -229,6 +229,10 @@ bool benchmark_server::benchmark(moveit_task_constructor_msgs::Benchmark::Reques
 				benchmarkresult.success = successes;
 				benchmarkresult.solutions = solutions;
 				benchmarkresult.config = config;
+				durations.clear();
+				//successes.clear();
+				//solutions.clear();
+				//config.clear();
 
 				results.push_back(benchmarkresult);
 			}

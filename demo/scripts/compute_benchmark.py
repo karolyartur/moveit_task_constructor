@@ -41,10 +41,12 @@ if __name__ == "__main__":
         else:
             constraint = 'unconstrained'
 
-        filename = '_'.join(['raw',planner,result.config[0],constraint,result.config[1]])
-        filename = filename + '.yaml'
-        with open(filename, 'w') as file:
-            documents = yaml.dump(results, file, default_flow_style=False)
+        # savetraj = results.benchmarks[0].solutions[0].sub_trajectory[5].trajectory
+
+        # filename = '_'.join(['raw',planner,result.config[0],constraint,result.config[1]])
+        # filename = filename + '.yaml'
+        # with open(filename, 'w') as file:
+        #     documents = yaml.dump(savetraj, file, default_flow_style=False)
 
         durations = result.durations
         solutions = result.solutions

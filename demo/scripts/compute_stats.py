@@ -70,6 +70,7 @@ for filename in filenames:
         else:
             mean_joint_trajectory_lengths = [-1, -1, -1, -1, -1, -1, -1]
             std_dev_joint_trajectory_lengths = [-1, -1, -1, -1, -1, -1, -1]
+        mean_joint_trajectory_lengths = sum(mean_joint_trajectory_lengths)
 
         if [planning_time for (condition, planning_time) in zip(mask,benchmark_data['planning_times']) if condition == True]:
             mean_planning_time = statistics.mean([planning_time for (condition, planning_time) in zip(mask,benchmark_data['planning_times']) if condition == True])

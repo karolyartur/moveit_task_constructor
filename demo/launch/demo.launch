@@ -28,7 +28,7 @@
     <arg name="fake_execution" value="true"/>
     <arg name="info" value="true"/>
     <arg name="debug" value="false"/>
-    <arg name="pipeline" value="chomp" />
+    <arg name="pipeline" value="ompl" />
   </include>
 
   <!-- Run Rviz -->

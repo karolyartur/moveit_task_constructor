@@ -15,7 +15,7 @@ object_reference_frame: "world"
 
 # Collision object for picking
 object_name: "object"
-object_types: ["BOX"]
+object_types: ["BOX", "CYLINDER", "SPHERE"]
 box_dimensions: [0.15, 0.05, 0.05] #[x,y,z]
 cylinder_dimensions: [0.1, 0.02] #[height, radius]
 sphere_dimensions: [0.025] #[radius]
